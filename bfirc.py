@@ -13,7 +13,6 @@
 #
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-# Ignore this comment
 
 import sys
 import os
@@ -40,7 +39,6 @@ import locale
 #from dump import DEBUG
 
 #locale.setlocale( locale.LC_ALL, '' )
-# HAI WELCOME TO MY INTERNET PROGRAM!!
 
 
 #birclib.DEBUG = True
@@ -60,7 +58,7 @@ COMMAND_LIST = [ "quit", "server", "server",
     "part", "part", "open", "msg", "say",
     "set", "away", "kick", "alias" ]
 
-COMMAND_LIST.sort()            # hack hack hack
+COMMAND_LIST.sort()            
 
 if not LOGS_DIR[-1] == "/": LOGS_DIR += "/"
 if not PROGRAM_DIR[-1] == "/": PROGRAM_DIR += "/"
@@ -136,7 +134,7 @@ class whois_struct:
 
 
 class irc_window:
-    def __init__ (self, scr, type):#, target=None):
+    def __init__ (self, scr, type):
         self.con = None
 
         self.max_h, self.max_w = scr.getmaxyx()
@@ -194,8 +192,6 @@ class irc_window:
         pass
 
     def redraw (self, no_refresh=False):
-        #self.window.redrawwin()
-        #self.window.touchwin()
         self.window.noutrefresh()
         if not no_refresh:
             self.window.refresh()
@@ -211,7 +207,6 @@ class irc_window:
             self.w = self.max_w
             self.y = 1
             self.x = 0
-            #SCROLL_BY = self.h
         elif type == "away":
             self.h = (self.max_h - 3) / 2
             self.w = self.max_w
@@ -931,10 +926,7 @@ class InputWindow ( irc_window ):
                 c_len = len( self.cache )
 
                 if c_len >= self.cache_lmt:
-                    try:
-                        del self.cache[ c_len - 1 ]
-                    except:
-                        raise_error("bobf fucked up again. Tell him I said: " + str( c_len ) + " and also: " + str( len( self.cache ) ) + " and also: " + str( self.cache_lmt ) )
+                    del self.cache[ c_len - 1 ]
 
             if in_c:
                 self.cache.insert( 0, self.cache.pop( self.cache.index( a ) ) )
@@ -1515,7 +1507,10 @@ def _on_nicknameinuse (connection, event):
         raise_error( "Nickname " + NICK + " is already in use." )
         return
 
-    new_nick = NICK + str( int( random.random()*100 ) )
+    if NICK == ALT_NICK:
+        new_nick = NICK + str( int( random.random()*100 ) )
+    else:
+        new_nick = ALT_NICK
 
     raise_error( "Nickname " + NICK + " in use, using " + new_nick + "" )
     NICK = new_nick
@@ -2261,7 +2256,7 @@ def load_rc (path=None, ft=True):
             IGNORE_TO, QUIT_MESSAGE, WATCH_LIST, \
             WATCHWORDS, NICK_COLS, LOGGING, LOGS_DIR, \
             SYS_COLOURS, INPUT_HOOKS, OUTPUT_HOOKS, \
-            SHOW_EVENTS, HIGHLIGHTS
+            SHOW_EVENTS, HIGHLIGHTS, ALT_NICK
 
     
     if not path:
@@ -3052,7 +3047,7 @@ def con_switch ( s=None ):
         keys = connections.keys()
         i = keys.index( current_con )
 
-        # male's a cunt
+        # 2.5 only:
         # i = i + 1 if i + 1 < len( keys ) else 0
         if i + 1 < len( keys ):
             i = i + 1
@@ -3222,8 +3217,8 @@ def __handle_event ( c, e ):
     if et in EXT_HOOKS and c and e:
         EXT_HOOKS[ et ]( c, e )
     ### Development only:
-#    elif et != "all_raw_messages" and not m:
-#        debug_event( c, e )
+    elif et != "all_raw_messages" and not m:
+        debug_event( c, e )
     ###
 
 
@@ -3241,7 +3236,7 @@ def set_handlers():
         "endofnames" : _on_endofnames,
         "privmsg" : _on_privmsg,
         "pubmsg" : _on_pubmsg,
-        "901" : _on_servicesmsg,
+  #      "901" : _on_servicesmsg,
         "privnotice" : _on_privnotice,
         "pubnotice" : _on_pubnotice,
         "action" : _on_action,
