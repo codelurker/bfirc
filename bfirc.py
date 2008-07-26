@@ -56,7 +56,7 @@ COMMAND_LIST = [ "quit", "server", "server",
     "watch", "watch", "names", "ignore",
     "ignoreto", "ignoreto", "join",
     "part", "part", "open", "msg", "say",
-    "set", "away", "kick", "alias" ]
+    "set", "away", "kick", "alias", "clear" ]
 
 COMMAND_LIST.sort()            
 
@@ -273,7 +273,7 @@ class irc_window:
             s = s.replace( "\n", " " )
 
         if a in [ COLOURS["plain"], COLOURS["plain"] | curses.A_BOLD ]: 
-            rx = re.search( "((ftp|http):\/\/[a-zA-Z0-9\/\\\:\?\%\.\&\;=#\-\_\!\+\~]*)", s )
+            rx = re.search( "((ftp|http|https):\/\/[a-zA-Z0-9\/\\\:\?\%\.\&\;=#\-\_\!\+\~]*)", s )
             if not rx:
                 rx = re.search( "(www\.[a-zA-Z0-9\/\\\:\?\%\.\&\;=#\-\_\!\+\~]*)", s )
             if rx:
@@ -1235,9 +1235,7 @@ class MessageWindow( InputWindow ):#irc_window ):
 def _on_connect (connection, event):
     global TIMER_QUEUE
 
-    connection_name = connections.keys()[connections.values().index(connection)]
-
-    con_switch(connection_name)
+    con_switch(connection.server)
 
     connection.notified = False
     if connection.attempts:
@@ -1246,10 +1244,10 @@ def _on_connect (connection, event):
 
     ping_server( connection )
 
-    if PASS:
+    if connection.server in PASS_LIST.keys():
         irc_process_command(connection, "whois", ["nickserv"])
 
-    if connection_name in AUTOJOIN_LIST.keys() and len(AUTOJOIN_LIST[connection_name]):
+    if connection.server in AUTOJOIN_LIST.keys() and len(AUTOJOIN_LIST[connection.server]):
         connection.need_autojoin = True
     
     if not connection.live:
@@ -1290,7 +1288,8 @@ def _on_servicesmsg( connection, event ):
     _on_privmsg (connection, event)
 
 def _on_privnotice(connection, event):
-    if len( event.arguments() ) < 2:
+    _on_pubnotice(connection, event)
+"""    if len( event.arguments() ) < 2:
         return
 
     s = event.arguments()[1] 
@@ -1310,6 +1309,7 @@ def _on_privnotice(connection, event):
     if not current_buffer == buffer:
         buffers[buffer].has_unread = True
         buffers[buffer].has_unread_to_me = True
+"""
 
 
 def _on_pubnotice(connection, event):
@@ -1492,25 +1492,26 @@ def _on_nick (connection, event):
             #buffers[key].nicklist.sort()
             buffers[key].write(src, targ, "nick")
 
-        if src == key:
+        if src.lower() == key:
             need_refresh = True
-            buffers[targ] = buffers.pop(key)
-            buffers[targ].write(src, targ, "nick")
+            buffer = targ.lower()
+            buffers[buffer] = buffers.pop(key)
+            buffers[buffer].write(src, targ, "nick")
 
-    if src == current_buffer:
+    if src.lower() == current_buffer:
         current_buffer = targ
     if need_refresh: update_info()
 
 def _on_nicknameinuse (connection, event):
-    global NICK
+    global NICK, ALTNICK
     if connection.live:
         raise_error( "Nickname " + NICK + " is already in use." )
         return
 
-    if NICK == ALT_NICK:
-        new_nick = NICK + str( int( random.random()*100 ) )
+    if ALTNICK and NICK != ALTNICK:
+        new_nick = ALTNICK
     else:
-        new_nick = ALT_NICK
+        new_nick = NICK + str( int( random.random()*100 ) )
 
     raise_error( "Nickname " + NICK + " in use, using " + new_nick + "" )
     NICK = new_nick
@@ -1548,9 +1549,13 @@ def _on_ctcpreply (connection, event):
         system_write( "Ping reply from " + birclib.nm_to_n( event.source() ) + " took " + secs + " seconds." )
     
 def _on_nickerror (connection, event):
-    global NICK
-    raise_error( "Erroneus nickname: " + event.arguments()[ 0 ] + ". Using bfirc-user." )
-    NICK = "bfirc-user"
+    global NICK, ALTNICK
+    if ALTNICK and NICK != ALTNICK:
+        raise_error("Erroneous nickname: " + event.arguments()[ 0 ] + ". Trying " + ALTNICK + ".")
+        NICK = ALTNICK
+    else:
+        raise_error( "Erroneous nickname: " + event.arguments()[ 0 ] + ". Using bfirc-user." )
+        NICK = "bfirc-user"
     irc_process_command( connection, "nick", [NICK] )
 
 def _on_nosuchnick (connection, event):
@@ -1578,7 +1583,7 @@ def _on_umode( connection, event ):
 
     if event.target().lower() == NICK.lower() and connection.need_autojoin:
         connection.need_autojoin = False
-        irc_process_command(connection, "join", AUTOJOIN_LIST[connections.keys()[connections.values().index(connection)]])
+        irc_process_command(connection, "join", AUTOJOIN_LIST[connection.server])
     system_write( '' + src + ' sets umode [' + event.arguments()[0] + ']' + targ, MAIN_WINDOW_NAME )
     
 def debug_event (connection, event):
@@ -1646,22 +1651,22 @@ def compile_whois (args, type, connection):
         if not len( w.user ):
             return    
         if w.user[0] == "NickServ":
-            if w.user[1] == "NickServ" and w.user[2] == "services." and w.user[4] == "Nickname Services":
-                system_write( "Sending password. NickServ authenticated as:" )
-                irc_process_command(connection, "id", [PASS])
+#            if w.user[1] == "NickServ" and w.user[2] == "services." and w.user[4] == "Nickname Services":
+            system_write( "Sending password. NickServ authenticated as:" )
+            irc_process_command(connection, "id", [PASS_LIST[connection.server]])
 #                if connection.need_autojoin:
 #                    irc_process_command(connection, "join", AUTOJOIN_LIST)
 #                    connection.need_autojoin = False
-            else:
-                system_write( "NickServ could not be authenticated. Not sending password." )
-                return False
+#            else:
+#                system_write( "NickServ could not be authenticated. Not sending password." )
+#                return False
         f("\n    Whois     :" + w.user[0] + " [" + w.user[1] + "@" + w.user[2] + "]", a, no_refresh=True)
         f("\n    IRC Name  :" + w.user[4], a, no_refresh=True)
         if w.channels:
             f("\n    Channels  :" + ":".join(w.channels[0].split(" ")), a, no_refresh=True)
         if w.server:
             if len(w.server) == 2: server = w.server[1]
-        f("\n    Server    :" + w.server[0] + " [" + (server or "") + "]", a, no_refresh=True)
+            f("\n    Server    :" + w.server[0] + " [" + (server or "") + "]", a, no_refresh=True)
 
         f("\nEnd of Whois", a)
 
@@ -1673,7 +1678,7 @@ def irc_process_command (connection, command, args):
     global SERVERS
     global PING_TIME
     global SHOW_URL_LIST
-
+    
     if command in ALIASES:
         command = ALIASES[ command ]
 
@@ -1694,7 +1699,7 @@ def irc_process_command (connection, command, args):
                 raise_error( "Error in hook handler for " + command + ":\n" + traceback.format_exc(0) )
 
 
-    v_cmds = [ "server", "url", "urls", "quit", "buddy", "close", "open", "set", "_stack", "loadrc", "connect", "alias" ]
+    v_cmds = [ "server", "url", "urls", "quit", "buddy", "close", "open", "set", "_stack", "loadrc", "connect", "alias", "clear" ]
 
 
     if not command in v_cmds and connection and not connection.connected:
@@ -1802,9 +1807,7 @@ def irc_process_command (connection, command, args):
                 cmd = URL_ACTION % URL
                 
             r = os.system( cmd )
-            if not r:
-                system_write("System command: " + cmd + " successful.")
-            else:
+            if r:
                 system_write("System command " + cmd + " returned: Error " + str( r ) + "")
 
         elif command == "urls":
@@ -1994,6 +1997,10 @@ def irc_process_command (connection, command, args):
             buffers[buf].write(NICK, text, "me_action")
 
         elif command in  ["id", "identify"]:
+            if not connection.server in PASS_LIST.keys():
+                return
+            if not args:
+                args.append(PASS_LIST[connection.server])
             connection.privmsg("nickserv", "identify " + args[0])
 
         elif command == "set":
@@ -2004,6 +2011,9 @@ def irc_process_command (connection, command, args):
 
         elif command == "null":
             pass
+            
+        elif command == "clear":
+            buffers[buf].clear()
 
         else:
             if command and not override:
@@ -2238,19 +2248,20 @@ def ask_yes_no (q):
         return False
 
 def load_rc (path=None, ft=True):
-    global NICK
+#    global NICK
+    global ALTNICK
     global PORT
     global LOGS_DIR
     global NICK_COLS
     global COLOURS
     global EVENTS
-    global SYS_COLOURS
-    global INPUT_HOOKS
+#    global SYS_COLOURS
+#    global INPUT_HOOKS
     global HOOKS
     global _INPUT_HOOKS
-    global OUTPUT_HOOKS
+#    global OUTPUT_HOOKS
     global _OUTPUT_HOOKS
-    global SERVERS, PORT, NICK, REALNAME, PASS, LOG_ID, \
+    global SERVERS, PORT, NICK, REALNAME, PASS_LIST, LOG_ID, \
             SCROLL_TOPIC, AUTO_REJOIN, URL_ACTION, \
             AUTOJOIN_LIST, BUDDY_LIST, IGNORE, \
             IGNORE_TO, QUIT_MESSAGE, WATCH_LIST, \
@@ -2319,7 +2330,7 @@ def exit_program ():
     for key in buffers.keys():
         buffers[key].stop_logging()
     curses.endwin()
-    print "Bye!"
+#    print "Bye!"
     sys.exit(0)
 
 def update_info (buffer=None):
@@ -3343,17 +3354,16 @@ def main (scr):
     connections[0].need_autojoin = False
 
     rc_file = load_rc(path)
+    
+    set_handlers()
 
     buffers[MAIN_WINDOW_NAME].scroll( buffers[MAIN_WINDOW_NAME].h )
     buffers[MAIN_WINDOW_NAME].scroll_to( 0 )
     
     buffers[MAIN_WINDOW_NAME].write_time()
+
     if SERVERS:
         irc_topic_change( buffers[MAIN_WINDOW_NAME], " " + PROGRAM_NAME + ": " + SERVERS[0] )
-
-    set_handlers()
-
-    if SERVERS:
         try:
             connections.pop(0)
             for server in SERVERS:

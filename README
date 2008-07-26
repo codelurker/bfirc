@@ -76,6 +76,8 @@ And here are the ones that are particular to bfirc:
 	e.g. /alias who names
 	This will make /who have the same functionality as /names
 	See ALIASES in sample-rc to set this permanently
+/clear
+	Clears the current buffer
 	
 Keys
 
@@ -119,7 +121,7 @@ Up/Down
 	per-channel input buffer, bfirc has a global input buffer.
 
 And finally, a step-by-step on the sample-rc you should've got in the
-tarball. Note that this is all real, genuine Python code as of 0.0.5.
+tarball. Note that this is all real, genuine Python code.
 Firstly, some brief, essential notes on Python syntax:
 
 	*	All strings are enclosed in quotes, either like this:
@@ -127,9 +129,14 @@ Firstly, some brief, essential notes on Python syntax:
 		or this:
 			bar = "bar"
 	
-	*	Any parameter that has multiple values, e.g. the autojoin list,
+	*	Any parameter that has multiple values, e.g. your buddy list,
 		are a Python list object, and look like this:
 			foo = ['one', 'two', "three", "four", 'five']
+			
+	*	A dictionary is like a special list, which maps a key to a value, eg.
+		your dictionary of passwords. They look like this:
+			dict = {"name": "value", "bar": 345}
+		Note that the value can be anything.
 	
 	*	Numbers are expressed without any quotes, like this:
 			foo = 10
@@ -159,17 +166,24 @@ WATCH_LIST =
 	A list of channels you want to keep an eye on; you'll receive a
 	notification when someone joins/leaves one of these channels.
 AUTOJOIN_LIST =
-	Join these channels automatically when you connect.
+	A dictionary of the format:
+	{"server1": ["#channel1", "#channel2"], "server2": ["#channel3"]}
+	Join these channels automatically when you connect. Note that if a server
+	isn't present in this list, nothing should go wrong.
 SERVER =
-	The server to connect to on startup.
+	A list of the servers to connect to on startup.
 PORT =
 	Connect on this port (default 6667).
 NICK =
 	Your nick.
+ALTNICK =
+	The nick to be used if NICK is unavailable for some reason (already logged
+	in, etc.)
 REALNAME =
 	Your real name (e.g. John Smith)
-PASS =
-	Your password (not encrypted, so stash it somewhere safe).
+PASS_LIST =
+	A dictionary of your passwords (similar format to AUTOJOIN_LIST)
+	Your passwords are not encrypted, so stash them somewhere safe.
 SCROLL_TOPIC =
 	Set to True or False to enable/disable fancy scrolling topic.
 SHOW_EVENTS =
