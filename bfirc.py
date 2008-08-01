@@ -345,7 +345,7 @@ class irc_window:
         if not self in buffers.values() or self.get_id() == current_buffer and not no_refresh and not AWAY:
             self.window.noutrefresh()
             if list_win.visible:
-                list_win.window.redrawwin()
+                #list_win.window.redrawwin()
                 list_win.window.noutrefresh()
 
         if self in buffers.values() and self.get_id() != current_buffer:
@@ -1220,7 +1220,7 @@ class MessageWindow( InputWindow ):#irc_window ):
         self.window.erase()
         s = s.center( self.w - self.x )
         self._echo_bold( s, attr )
-        self.window.redrawwin()
+        #self.window.redrawwin()
         self.window.refresh()
     
     def resize( self, scr, no_create=True ):
@@ -2112,12 +2112,12 @@ def set_away ():
         away_win.marks = []
         context_win.contents = []
         context_win.window.erase()
-        away_win.window.redrawwin()
+        #away_win.window.redrawwin()
         away_win.window.noutrefresh()
     #    context_win.window.redrawwin()
         context_win.window.noutrefresh()
         sep_win.window.hline( 0, 0, curses.ACS_HLINE, sep_win.w )
-        sep_win.window.redrawwin()
+        #sep_win.window.redrawwin()
         sep_win.window.noutrefresh()
         away_win.window.refresh()
 
@@ -2346,7 +2346,7 @@ def update_info (buffer=None):
     info_win.window.attrset(COLOURS["metalk"])
     info_win.window.hline(tmpy, tmpx, curses.ACS_HLINE, info_win.w - tmpx - 0)
  
-    info_win.window.redrawwin()
+    #info_win.window.redrawwin()
     info_win.window.noutrefresh()
 
     status_win.window.erase()
@@ -2503,7 +2503,7 @@ def buffer_switch (buffer=None):
         buffers[current_buffer].needs_resize = False
 
     if buffer:
-        buffers[current_buffer].window.redrawwin()
+        #buffers[current_buffer].window.redrawwin()
         buffers[current_buffer].window.noutrefresh()
 
     if buffers[current_buffer].dirty:
@@ -3020,7 +3020,7 @@ def do_resize ( scr ):
 
     for x in [status_win.window, topic_win.window, list_win.window, info_win.window ]:
 
-        x.redrawwin()
+        #x.redrawwin()
         x.touchwin()
         x.refresh()
 
