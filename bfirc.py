@@ -391,7 +391,7 @@ class irc_window:
         msg_from, attribs, string = format_string( src, string, event_type )
 
         if event_type in [ 'privmsg', 'pubmsg', 'action' ]:
-            if src in self.nicklist:
+            if src in self.nicklist and not is_ignored(src):
                 self.nicklist.insert( 0, self.nicklist.pop( self.nicklist.index( src ) ) )
 
             if src not in self._ncols.keys():
